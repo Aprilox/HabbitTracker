@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Utilisateur
+model User {
+  id            String   @id @default(cuid())
+  pseudo        String   @unique
+  password      String   // Mot de passe hashé
+  avatar        String   @default("👤")
+  createdAt     DateTime @default(now())
+  
+  // Système de Jokers
+  jokerCount    Int      @default(0)  // Nombre de jokers par période
+  jokerPeriod   String   @default("week") // "week", "month", "year"
+  
+  // Relations
+  categories    Category[]
+  habits        Habit[]
+  habitLogs     HabitLog[]
+  friends       Friendship[] @relation("UserFriends")
+  friendOf      Friendship[] @relation("FriendOf")
+}
+
+// Catégorie d'habitudes (MATIN, JOURNÉE, SOIR, HEBDO, etc.)
+model Category {
+  id        String   @id @default(cuid())
+  name      String   // "MATIN", "JOURNÉE", "SOIR", "HEBDO", "ADDICTION"
+  icon      String   // "☀️", "🔵", "🌙", "📅", "🚫"
+  type      String   @default("quotidien") // "quotidien", "hebdo", "addiction"
+  order     Int      @default(0)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habits    Habit[]
+  
+  @@unique([userId, name])
+}
+
+// Habitude
+model Habit {
+  id          String   @id @default(cuid())
+  name        String   // "Réveil avant 9h", "50 pompes", etc.
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  // Type d'habitude
+  frequency   String   @default("daily") // "daily" ou "weekly"
+  targetCount Int?     // Pour les habitudes avec compteur (ex: "Séance de Sport (4)")
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  logs        HabitLog[]
+}
+
+// Log d'habitude (une case cochée ou non)
+model HabitLog {
+  id        String   @id @default(cuid())
+  date      DateTime // Le jour
+  completed Boolean  @default(false)
+  isJoker   Boolean  @default(false) // Si c'est un joker utilisé
+  count     Int?     // Pour les habitudes avec compteur
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([habitId, date])
+}
+
+// Amitié entre utilisateurs
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  status    String   @default("pending") // "pending", "accepted"
+  createdAt DateTime @default(now())
+  
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, friendId])
+}

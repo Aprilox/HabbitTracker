@@ -1,0 +1,12 @@
+# Robots.txt for HabitTracker
+# https://habittracker.app
+
+User-agent: *
+Allow: /
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://habittracker.app/sitemap.xml
+
